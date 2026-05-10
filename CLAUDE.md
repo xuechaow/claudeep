@@ -2,6 +2,8 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+> **Resume this session:** `claude --resume 506ce6fa-83ed-45e0-bcdd-d0ff71701bd7`
+
 ## Repository Purpose
 
 Configures Claude Code to use the DeepSeek API as a backend instead of Anthropic's API, by setting environment variables (`ANTHROPIC_BASE_URL`, model mappings, etc.) and adding a `source` line to the user's shell config.
