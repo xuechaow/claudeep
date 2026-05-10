@@ -18,15 +18,11 @@
 ## Quick Start
 
 ```bash
-bash <(curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh)
+curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o /usr/local/bin/claudeep && chmod +x /usr/local/bin/claudeep
+claudeep
 ```
 
-Prompts for your API key, sets everything up, tests the connection. Then:
-
-```bash
-claudeep           # quick status
-claudeep doctor    # if something is off
-```
+If `/usr/local/bin` isn't writable, use `~/.local/bin` (add it to your PATH first).
 
 ## What It Does
 

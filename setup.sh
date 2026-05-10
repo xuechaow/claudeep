@@ -11,7 +11,7 @@
 #   ./setup.sh --dry-run              # Show what would be done
 #
 # One-liner:
-#   bash <(curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh)
+#   curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash -s -- YOUR_API_KEY
 
 set -euo pipefail
 
