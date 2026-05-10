@@ -44,6 +44,12 @@ load test_helper
     export PATH="${mock_bin}:${PATH}"
 
     run do_doctor "zsh" "${HOME}/.zshrc"
+    # Debug: show output on failure
+    if [[ "$output" != *"All checks passed"* ]]; then
+        echo "=== DOCTOR OUTPUT (test 25) ===" >&2
+        echo "$output" >&2
+        echo "=== END OUTPUT ===" >&2
+    fi
     [[ "$output" == *"All checks passed"* ]]
 }
 
