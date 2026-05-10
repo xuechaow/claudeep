@@ -367,6 +367,19 @@ do_install() {
         echo ""
         echo -e "  Run:  ${BOLD}claude --bare${NC}"
     fi
+
+    # Offer to install CLI if script is a real file (not piped from curl)
+    if [[ -f "${BASH_SOURCE[0]:-$0}" ]] && [[ "${ARG_QUIET:-false}" != "true" ]]; then
+        local cli_name="${ARG_CLI_NAME:-claudeep}"
+        if ! command -v "$cli_name" &>/dev/null; then
+            echo ""
+            echo -n "Install '${cli_name}' CLI command to /usr/local/bin? [Y/n] "
+            read -r reply
+            if [[ -z "$reply" ]] || [[ "$reply" =~ ^[Yy] ]]; then
+                do_install_cli
+            fi
+        fi
+    fi
 }
 
 # ── Uninstall ─────────────────────────────────────────────────────────

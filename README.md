@@ -18,23 +18,14 @@
 ## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash -s -- sk-your-api-key
+curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o setup.sh
+bash setup.sh sk-your-api-key
 ```
 
-### Install as a CLI Command
+Setup will prompt to auto-install the `claudeep` CLI command. After that:
 
 ```bash
-./setup.sh install                        # Install as 'claudeep'
-./setup.sh install --cli-name myname      # Custom name
-```
-
-After installation, run from anywhere:
-
-```bash
-claudeep doctor              # Health check
-claudeep doctor --fix        # Auto-repair issues
-claudeep uninstall           # Remove config
-claudeep sk-...              # Reconfigure
+claudeep doctor
 ```
 
 ## What It Does
