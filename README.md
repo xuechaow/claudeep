@@ -15,14 +15,20 @@
 
 ---
 
-## Quick Start
+## Install
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o /usr/local/bin/claudeep && chmod +x /usr/local/bin/claudeep
-claudeep
+npm install -g claudeep@latest
+# or: pnpm add -g claudeep@latest
+# or: brew tap xuechaow/claudeep && brew install claudeep
+# or: curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o /usr/local/bin/claudeep && chmod +x /usr/local/bin/claudeep
 ```
 
-If `/usr/local/bin` isn't writable, use `~/.local/bin` (add it to your PATH first).
+Then:
+
+```bash
+claudeep
+```
 
 ## What It Does
 

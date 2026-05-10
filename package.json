@@ -1,0 +1,27 @@
+{
+  "name": "claudeep",
+  "version": "1.0.0",
+  "description": "Configure Claude Code to use DeepSeek API as backend",
+  "bin": {
+    "claudeep": "setup.sh"
+  },
+  "files": [
+    "setup.sh"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/xuechaow/claudeep.git"
+  },
+  "keywords": [
+    "claude",
+    "claude-code",
+    "deepseek",
+    "anthropic",
+    "llm",
+    "cli",
+    "ai",
+    "deepseek-v4"
+  ],
+  "author": "xuechaow",
+  "license": "MIT"
+}
