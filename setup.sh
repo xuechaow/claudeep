@@ -51,19 +51,26 @@ ${BOLD}Usage:${NC}
   setup.sh [OPTIONS] [API_KEY]
 
 ${BOLD}Options:${NC}
-  -h, --help        Show this help message
-  -u, --uninstall   Remove all configuration files and shell integration
-  -s, --shell NAME  Specify shell (bash, zsh, fish). Auto-detected by default.
-  -n, --no-test     Skip the API connectivity test after setup
-  -d, --dry-run     Print what would be done without making changes
-  -q, --quiet       Suppress informational output (errors still shown)
+  -h, --help         Show this help message
+  -u, --uninstall    Remove all configuration files and shell integration
+  -D, --doctor       Run health check — diagnose environment, config, and API
+  -I, --install-cli  Install as a global CLI command (symlink to PATH)
+      --cli-name N   CLI command name (default: cld)
+      --cli-bin DIR  Install directory (default: /usr/local/bin)
+  -s, --shell NAME   Specify shell (bash, zsh, fish). Auto-detected by default.
+  -n, --no-test      Skip the API connectivity test during setup
+  -d, --dry-run      Print what would be done without making changes
+  -q, --quiet        Suppress informational output (errors still shown)
 
 ${BOLD}Examples:${NC}
-  setup.sh                           # Interactive mode
-  setup.sh sk-abc123def456           # Non-interactive with API key
-  setup.sh --shell fish sk-...       # Force fish shell config
-  setup.sh --uninstall               # Remove integration
-  setup.sh --dry-run                 # Preview changes
+  setup.sh                              # Interactive setup
+  setup.sh sk-abc123def456              # Non-interactive with API key
+  setup.sh --doctor                     # Check health of current config
+  setup.sh --install-cli                # Install as 'cld' command
+  setup.sh --install-cli --cli-name openclaw  # Install as 'openclaw'
+  setup.sh --shell fish sk-...          # Force fish shell config
+  setup.sh --uninstall                  # Remove integration
+  setup.sh --dry-run                    # Preview changes
 
 ${BOLD}Environment variable overrides:${NC}
   CLD_DEEP_BASE_URL          Default: ${BASE_URL}
@@ -395,10 +402,262 @@ do_uninstall() {
     echo ""
 }
 
+# ── Doctor ────────────────────────────────────────────────────────────
+do_doctor() {
+    local shell_name="$1"
+    local config_file="$2"
+    local issues=0
+    local warnings=0
+
+    echo ""
+    echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${BLUE}║  DeepSeek + Claude Code — Health Check       ║${NC}"
+    echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    # ── 1. Current environment ──────────────────────────────────────
+    echo -e "${BOLD}1. Environment variables${NC}"
+    if [[ -n "${ANTHROPIC_BASE_URL:-}" ]]; then
+        echo -e "   ${GREEN}✓${NC} ANTHROPIC_BASE_URL = ${ANTHROPIC_BASE_URL}"
+    else
+        echo -e "   ${RED}✗${NC} ANTHROPIC_BASE_URL not set"
+        ((issues++))
+    fi
+
+    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+        local cur_key="${ANTHROPIC_AUTH_TOKEN}"
+        echo -e "   ${GREEN}✓${NC} ANTHROPIC_AUTH_TOKEN = ${cur_key:0:10}...${cur_key: -4}"
+    else
+        echo -e "   ${RED}✗${NC} ANTHROPIC_AUTH_TOKEN not set"
+        ((issues++))
+    fi
+
+    local models=(SONNET_MODEL OPUS_MODEL HAIKU_MODEL)
+    for m in "${models[@]}"; do
+        local varname="ANTHROPIC_DEFAULT_${m}"
+        if [[ -n "${!varname:-}" ]]; then
+            echo -e "   ${GREEN}✓${NC} ${varname} = ${!varname}"
+        else
+            echo -e "   ${YELLOW}⚠${NC} ${varname} not set (will use Claude Code default)"
+            ((warnings++))
+        fi
+    done
+
+    if [[ -n "${CLAUDE_CODE_SUBAGENT_MODEL:-}" ]]; then
+        echo -e "   ${GREEN}✓${NC} CLAUDE_CODE_SUBAGENT_MODEL = ${CLAUDE_CODE_SUBAGENT_MODEL}"
+    fi
+    if [[ -n "${CLAUDE_CODE_EFFORT_LEVEL:-}" ]]; then
+        echo -e "   ${GREEN}✓${NC} CLAUDE_CODE_EFFORT_LEVEL = ${CLAUDE_CODE_EFFORT_LEVEL}"
+    fi
+
+    # ── 2. Env file ─────────────────────────────────────────────────
+    echo ""
+    echo -e "${BOLD}2. Config file${NC} (${ENV_FILE})"
+    if [[ -f "$ENV_FILE" ]]; then
+        local perms
+        perms=$(stat -f "%p" "$ENV_FILE" 2>/dev/null || stat -c "%a" "$ENV_FILE" 2>/dev/null)
+        if [[ "$perms" == "100600" || "$perms" == "600" ]]; then
+            echo -e "   ${GREEN}✓${NC} File exists (permissions: 600)"
+        else
+            echo -e "   ${YELLOW}⚠${NC} File exists but permissions are ${perms} (should be 600)"
+            ((warnings++))
+        fi
+
+        # Compare env file key with current env key
+        local env_key
+        env_key=$(grep 'ANTHROPIC_AUTH_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d'"' -f2)
+        if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]] && [[ -n "$env_key" ]]; then
+            if [[ "$env_key" == "${ANTHROPIC_AUTH_TOKEN}" ]]; then
+                echo -e "   ${GREEN}✓${NC} Key matches current environment"
+            else
+                echo -e "   ${RED}✗${NC} Key MISMATCH — env file differs from current session!"
+                echo -e "     ${YELLOW}Env file:${NC} ${env_key:0:10}...${env_key: -4}"
+                echo -e "     ${YELLOW}Current:${NC}  ${ANTHROPIC_AUTH_TOKEN:0:10}...${ANTHROPIC_AUTH_TOKEN: -4}"
+                echo -e "     ${GREEN}Fix:${NC} source ${ENV_FILE}"
+                ((issues++))
+            fi
+        fi
+
+        # Check for stale env.fish
+        if [[ -f "$ENV_FILE_FISH" ]]; then
+            local fish_key
+            fish_key=$(grep 'ANTHROPIC_AUTH_TOKEN' "$ENV_FILE_FISH" 2>/dev/null | cut -d'"' -f2)
+            if [[ -n "$env_key" ]] && [[ "$fish_key" != "$env_key" ]]; then
+                echo -e "   ${YELLOW}⚠${NC} env.fish has a different key (fish users may have issues)"
+                ((warnings++))
+            fi
+        fi
+    else
+        echo -e "   ${RED}✗${NC} File missing"
+        echo -e "     ${GREEN}Fix:${NC} ./setup.sh YOUR_API_KEY"
+        ((issues++))
+    fi
+
+    # ── 3. Shell config ─────────────────────────────────────────────
+    echo ""
+    echo -e "${BOLD}3. Shell integration${NC} (${config_file})"
+    if [[ -f "$config_file" ]]; then
+        # Check for integration marker block
+        local marker_count
+        marker_count=$(grep -c ">>> DeepSeek Claude integration >>>" "$config_file" 2>/dev/null || true)
+        if [[ "$marker_count" -eq 1 ]]; then
+            echo -e "   ${GREEN}✓${NC} Integration block present"
+        elif [[ "$marker_count" -gt 1 ]]; then
+            echo -e "   ${RED}✗${NC} ${marker_count} duplicate integration blocks!"
+            echo -e "     ${GREEN}Fix:${NC} ./setup.sh --uninstall && ./setup.sh YOUR_KEY"
+            ((issues++))
+        else
+            echo -e "   ${RED}✗${NC} No integration block found"
+            ((issues++))
+        fi
+
+        # Check for stale direct exports (outside the marker block)
+        local direct_count
+        direct_count=$(grep -c "^export ANTHROPIC_" "$config_file" 2>/dev/null || true)
+        if [[ "$direct_count" -gt 0 ]]; then
+            echo -e "   ${RED}✗${NC} Found ${direct_count} direct export(s) OUTSIDE the integration block"
+            echo -e "     These override ~/.deepseek-claude/env and may load stale keys."
+            echo -e "     ${GREEN}Fix:${NC} Manually remove 'export ANTHROPIC_*' lines from ${config_file}"
+            echo -e "     (Keep only the '# >>> DeepSeek Claude integration >>>' block)"
+            ((issues++))
+
+            # Show the problematic lines
+            local stale_lines
+            stale_lines=$(grep -n "^export ANTHROPIC_" "$config_file" 2>/dev/null || true)
+            if [[ -n "$stale_lines" ]]; then
+                while IFS= read -r line; do
+                    echo -e "       ${YELLOW}Line ${line}${NC}"
+                done <<< "$stale_lines"
+            fi
+        else
+            echo -e "   ${GREEN}✓${NC} No stale direct exports"
+        fi
+    else
+        echo -e "   ${YELLOW}⚠${NC} Config file does not exist yet (will be created during setup)"
+        ((warnings++))
+    fi
+
+    # ── 4. API connectivity ─────────────────────────────────────────
+    echo ""
+    echo -e "${BOLD}4. API connectivity${NC}"
+    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+        if test_api "${ANTHROPIC_AUTH_TOKEN}"; then
+            : # test_api already prints success
+        else
+            ((issues++))
+        fi
+    else
+        echo -e "   ${YELLOW}⊘${NC} Skipped — no API key in environment"
+        ((warnings++))
+    fi
+
+    # ── 5. CLI check ────────────────────────────────────────────────
+    echo ""
+    echo -e "${BOLD}5. CLI installation${NC}"
+    local found_cli=false
+    local cli_name="${ARG_CLI_NAME:-cld}"
+    if command -v "$cli_name" &>/dev/null; then
+        local cli_path
+        cli_path=$(command -v "$cli_name")
+        echo -e "   ${GREEN}✓${NC} Command '${cli_name}' found at ${cli_path}"
+        found_cli=true
+    fi
+    if command -v claude &>/dev/null; then
+        local claude_path
+        claude_path=$(command -v claude)
+        echo -e "   ${GREEN}✓${NC} Claude Code found at ${claude_path}"
+    else
+        echo -e "   ${YELLOW}⚠${NC} Claude Code CLI not found in PATH"
+        ((warnings++))
+    fi
+    if [[ "$found_cli" == "false" ]]; then
+        echo -e "   ${YELLOW}⊘${NC} Setup CLI not installed. Run: ./setup.sh --install-cli"
+    fi
+
+    # ── Summary ─────────────────────────────────────────────────────
+    echo ""
+    echo -e "${BOLD}═══════════════════════════════════════════════${NC}"
+    if [[ "$issues" -eq 0 ]] && [[ "$warnings" -eq 0 ]]; then
+        echo -e "  ${GREEN}${BOLD}✓ All checks passed.${NC} You're ready: ${BOLD}claude --bare${NC}"
+    elif [[ "$issues" -eq 0 ]]; then
+        echo -e "  ${YELLOW}${BOLD}✓ OK with ${warnings} minor warning(s).${NC}"
+        echo -e "  Review above. Run: ${BOLD}claude --bare${NC}"
+    else
+        echo -e "  ${RED}${BOLD}✗ Found ${issues} issue(s), ${warnings} warning(s).${NC}"
+        echo -e "  Apply the fixes suggested above, then re-run: ${BOLD}./setup.sh --doctor${NC}"
+    fi
+    echo ""
+}
+
+# ── CLI installation ────────────────────────────────────────────────
+do_install_cli() {
+    local bin_dir="${ARG_CLI_BIN:-/usr/local/bin}"
+    local cli_name="${ARG_CLI_NAME:-cld}"
+    local target="${bin_dir}/${cli_name}"
+    local script_path
+
+    script_path="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/setup.sh"
+
+    echo ""
+    echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗${NC}"
+    echo -e "${BOLD}${BLUE}║  Install CLI Command                         ║${NC}"
+    echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${NC}"
+    echo ""
+
+    info "Script:  ${script_path}"
+    info "Target:  ${target}"
+
+    if [[ "${ARG_DRY_RUN:-false}" == "true" ]]; then
+        echo -e "${YELLOW}[DRY RUN]${NC} Would symlink ${script_path} → ${target}"
+        return 0
+    fi
+
+    # Check the script exists
+    if [[ ! -f "$script_path" ]]; then
+        error "Script not found at ${script_path}"
+        return 1
+    fi
+
+    # Check write permission; suggest sudo if needed
+    if [[ ! -w "$bin_dir" ]]; then
+        echo ""
+        echo -e "  ${YELLOW}${bin_dir} is not writable.${NC}"
+        echo -e "  Rerun with sudo:"
+        echo ""
+        echo -e "    ${BOLD}sudo ./setup.sh --install-cli${NC}"
+        echo ""
+        return 1
+    fi
+
+    # Remove existing symlink or file at target
+    if [[ -L "$target" ]] || [[ -f "$target" ]]; then
+        info "Removing existing ${target}"
+        rm -f "$target"
+    fi
+
+    # Create symlink
+    ln -s "$script_path" "$target"
+    chmod +x "$target" 2>/dev/null || true
+
+    success "Installed: ${BOLD}${cli_name}${NC} → ${script_path}"
+    echo ""
+    echo -e "  Now you can run from anywhere:"
+    echo ""
+    echo -e "    ${BOLD}${cli_name} sk-your-api-key${NC}      # Setup"
+    echo -e "    ${BOLD}${cli_name} --doctor${NC}              # Health check"
+    echo -e "    ${BOLD}${cli_name} --uninstall${NC}           # Remove config"
+    echo -e "    ${BOLD}${cli_name} --install-cli${NC}         # Re-install CLI"
+    echo ""
+}
+
 # ── Main ──────────────────────────────────────────────────────────────
 main() {
     local ARG_SHELL=""
     local ARG_UNINSTALL=false
+    local ARG_DOCTOR=false
+    local ARG_INSTALL_CLI=false
+    local ARG_CLI_NAME=""
+    local ARG_CLI_BIN=""
     local ARG_NO_TEST=false
     local ARG_DRY_RUN=false
     local ARG_QUIET=false
@@ -407,15 +666,19 @@ main() {
     # Parse flags
     while [[ $# -gt 0 ]]; do
         case "$1" in
-            -h|--help)     usage ;;
-            -u|--uninstall) ARG_UNINSTALL=true; shift ;;
-            -s|--shell)    ARG_SHELL="$2"; shift 2 ;;
-            -n|--no-test)  ARG_NO_TEST=true; shift ;;
-            -d|--dry-run)  ARG_DRY_RUN=true; shift ;;
-            -q|--quiet)    ARG_QUIET=true; shift ;;
-            --)            shift; break ;;
-            -*)            error "Unknown option: $1"; usage; exit 1 ;;
-            *)             API_KEY="$1"; shift; break ;;
+            -h|--help)       usage ;;
+            -u|--uninstall)   ARG_UNINSTALL=true; shift ;;
+            -D|--doctor)      ARG_DOCTOR=true; shift ;;
+            -I|--install-cli) ARG_INSTALL_CLI=true; shift ;;
+            --cli-name)       ARG_CLI_NAME="$2"; shift 2 ;;
+            --cli-bin)        ARG_CLI_BIN="$2"; shift 2 ;;
+            -s|--shell)       ARG_SHELL="$2"; shift 2 ;;
+            -n|--no-test)     ARG_NO_TEST=true; shift ;;
+            -d|--dry-run)     ARG_DRY_RUN=true; shift ;;
+            -q|--quiet)       ARG_QUIET=true; shift ;;
+            --)               shift; break ;;
+            -*)               error "Unknown option: $1"; usage; exit 1 ;;
+            *)                API_KEY="$1"; shift; break ;;
         esac
     done
 
@@ -435,12 +698,25 @@ main() {
         step()    { :; }
     fi
 
-    # Dispatch
+    # Dispatch: doctor (can run standalone or after install)
+    if [[ "$ARG_DOCTOR" == "true" ]]; then
+        do_doctor "$shell_name" "$config_file"
+        return 0
+    fi
+
+    # Dispatch: install CLI
+    if [[ "$ARG_INSTALL_CLI" == "true" ]]; then
+        do_install_cli
+        return 0
+    fi
+
+    # Dispatch: uninstall
     if [[ "$ARG_UNINSTALL" == "true" ]]; then
         do_uninstall "$shell_name" "$config_file"
         return 0
     fi
 
+    # Default: install
     # If no API key provided, prompt interactively
     if [[ -z "$API_KEY" ]]; then
         echo -n "Enter your DeepSeek API key (starts with sk-): "

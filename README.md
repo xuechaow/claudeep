@@ -31,6 +31,21 @@ Then run Claude Code as usual:
 claude --bare
 ```
 
+### Install as a CLI Command
+
+```bash
+./setup.sh --install-cli          # Install as 'cld'
+./setup.sh --install-cli --cli-name myname  # Custom name
+```
+
+After installation, run from anywhere:
+
+```bash
+cld --doctor          # Health check
+cld --uninstall       # Remove config
+cld sk-...            # Reconfigure
+```
+
 ## What It Does
 
 The script sets the environment variables that Claude Code reads to discover an Anthropic-compatible API. DeepSeek provides an Anthropic Messages API endpoint at `https://api.deepseek.com/anthropic`.
@@ -53,12 +68,16 @@ The configuration is stored in `~/.deepseek-claude/env` and automatically source
 setup.sh [OPTIONS] [API_KEY]
 
 Options:
-  -h, --help        Show help message
-  -u, --uninstall   Remove all configuration
-  -s, --shell NAME  Specify shell (bash, zsh, fish) — auto-detected by default
-  -n, --no-test     Skip the API connectivity test
-  -d, --dry-run     Preview changes without applying them
-  -q, --quiet       Suppress informational output
+  -h, --help         Show help message
+  -D, --doctor       Run health check — diagnose environment, config, and API
+  -I, --install-cli  Install as a global CLI command (default: cld)
+      --cli-name N   Custom CLI command name
+      --cli-bin DIR  Install directory (default: /usr/local/bin)
+  -u, --uninstall    Remove all configuration
+  -s, --shell NAME   Specify shell (bash, zsh, fish) — auto-detected by default
+  -n, --no-test      Skip the API connectivity test
+  -d, --dry-run      Preview changes without applying them
+  -q, --quiet        Suppress informational output
 ```
 
 ### Custom Models or Endpoints
@@ -89,6 +108,24 @@ CLD_DEEP_SONNET_MODEL="your-custom-model" ./setup.sh sk-...
 
 > **Note for fish users:** The script cannot export variables into your current fish session from bash. After setup, run `source ~/.deepseek-claude/env.fish` or open a new terminal.
 
+## Doctor — Health Check
+
+Diagnose your setup to catch stale keys, config conflicts, and API issues:
+
+```bash
+cld --doctor
+# or: ./setup.sh --doctor
+```
+
+The doctor checks:
+1. **Environment variables** — are `ANTHROPIC_*` vars set and consistent?
+2. **Config file** — does `~/.deepseek-claude/env` exist with correct permissions? Does its key match the current session?
+3. **Shell integration** — is the source block present? Are there stale direct exports from an old setup that could load wrong keys?
+4. **API connectivity** — can the current key reach DeepSeek?
+5. **CLI installation** — is `cld` in your PATH? Is Claude Code available?
+
+Each check shows a ✓, ✗, or ⚠ with specific fix instructions.
+
 ## Uninstall
 
 ```bash
@@ -116,10 +153,11 @@ The marker comments (`# >>> DeepSeek Claude integration >>>` / `# <<<`) make uni
 
 ```
 cld_deep/
-├── setup.sh          # Main setup/uninstall script
+├── setup.sh          # Setup, doctor, uninstall, CLI install — all in one
 ├── README.md         # This file
 ├── LICENSE           # MIT license
-└── CLAUDE.md         # Guidance for Claude Code instances
+├── CLAUDE.md         # Guidance for Claude Code instances
+└── .gitignore
 ```
 
 ## License
