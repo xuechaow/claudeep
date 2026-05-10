@@ -50,38 +50,69 @@ User runs claudeep [command] → setup.sh
 |---|---|
 | `ANTHROPIC_BASE_URL` | `https://api.deepseek.com/anthropic` |
 | `ANTHROPIC_AUTH_TOKEN` | User-provided DeepSeek API key |
-| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `deepseek-v4-pro` |
-| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `deepseek-v4-pro` |
-| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `deepseek-v4-flash` |
-| `CLAUDE_CODE_SUBAGENT_MODEL` | `deepseek-v4-flash` |
+| `ANTHROPIC_DEFAULT_SONNET_MODEL` | `deepseek-v4-pro[1m]` |
+| `ANTHROPIC_DEFAULT_OPUS_MODEL` | `deepseek-v4-pro[1m]` |
+| `ANTHROPIC_DEFAULT_HAIKU_MODEL` | `deepseek-v4-flash[1m]` |
+| `CLAUDE_CODE_SUBAGENT_MODEL` | `deepseek-v4-flash[1m]` |
 | `CLAUDE_CODE_EFFORT_LEVEL` | `max` |
 
-All defaults can be overridden by setting `CLD_DEEP_*` environment variables before running `setup.sh`.
+The `[1m]` suffix enables 1M-token context window (DeepSeek requirement). Defaults can be overridden via `CLD_DEEP_*` env vars.
+
+## Distribution
+
+- **One-liner:** `curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/install.sh | bash`
+- **npm:** `npm install -g claudeep@latest`
+- **Homebrew:** `brew tap xuechaow/claudeep && brew install claudeep`
 
 ## Common Commands
 
 ```bash
-# Interactive setup
-./setup.sh
-
-# Subcommand-style (preferred, works via 'claudeep' symlink too)
-./setup.sh doctor            # Health check
-./setup.sh doctor --fix      # Health check + auto-repair
-./setup.sh uninstall         # Remove all config
-./setup.sh install           # Install as global 'claudeep' command
-
-# Non-interactive with API key
-./setup.sh sk-abc123def456
-
-# Dry-run to preview
-./setup.sh setup --dry-run sk-...
-
-# Force a specific shell
-./setup.sh --shell fish sk-...
+claudeep                   # Default: status if configured, else interactive setup
+claudeep status            # Quick health check
+claudeep doctor            # Full diagnostic
+claudeep doctor --fix      # Diagnostic + auto-repair (key mismatch, stale exports, etc.)
+claudeep setup sk-...      # Configure with API key
+claudeep uninstall         # Remove all config
+claudeep install           # Install CLI symlink to /usr/local/bin
 ```
 
-## Testing / Validation
+## Testing
 
-The script tests connectivity by sending a minimal request to `POST /v1/messages` with `max_tokens: 8`. It checks for HTTP 200 and the presence of `"id":` in the response body. API test can be skipped with `--no-test`.
+```
+test/
+├── test_helper.bash           # Temp HOME, mocks, shared setup
+├── api_key.bats         (5)   # Key validation & format checks
+├── shell_detect.bats    (5)   # bash/zsh/fish detection
+├── env_file.bats        (6)   # POSIX/fish env generation, permissions
+├── source_block.bats    (6)   # Shell config marker block add/remove
+├── doctor.bats          (6)   # Health checks, --fix auto-repair
+├── cli.bats            (11)   # Subcommand dispatch, install/uninstall/dry-run
+└── integration.sh      (16)   # E2E: install → doctor → security → uninstall
+```
 
-No other test infrastructure exists — this is a shell script repository.
+**55 checks total** (39 unit + 16 integration). Run with:
+```bash
+brew install bats-core       # one-time
+bats test/                    # unit tests
+bash test/integration.sh      # integration tests
+```
+
+Tests use temp `$HOME` directories — real config files are never touched. API calls are skipped (`ARG_NO_TEST=true`) or mocked. CI runs both macOS and Linux via GitHub Actions.
+
+## CI
+
+`.github/workflows/test.yml` — 4 jobs (unit + integration × macOS + Linux), `fail-fast: false`. Bats installed from source tarball. Integration tests cover install, security (permissions, key masking), doctor, status, and uninstall flows.
+
+## Platform Compatibility
+
+| Difference | Handling |
+|---|---|
+| `stat` (BSD vs GNU) | Branch on `uname` |
+| Shell config path | `detect_shell_config()` maps macOS bash → `.bash_profile`, Linux → `.bashrc` |
+| `sed -i` | BSD needs `sed -i ''`, GNU needs `sed -i` — branched |
+
+## Current Status
+
+- Published on npm: `claudeep@1.0.0`
+- Homebrew tap: `xuechaow/homebrew-claudeep`
+- Pending: PR to [deepseek-ai/awesome-deepseek-agent](https://github.com/deepseek-ai/awesome-deepseek-agent) to add claudeep as quick-setup option in the Claude Code guide (issue #92)

@@ -17,10 +17,10 @@ set -euo pipefail
 
 # ── Configuration defaults (override via env vars before running) ─────
 BASE_URL="${CLD_DEEP_BASE_URL:-https://api.deepseek.com/anthropic}"
-SONNET_MODEL="${CLD_DEEP_SONNET_MODEL:-deepseek-v4-pro}"
-OPUS_MODEL="${CLD_DEEP_OPUS_MODEL:-deepseek-v4-pro}"
-HAIKU_MODEL="${CLD_DEEP_HAIKU_MODEL:-deepseek-v4-flash}"
-SUBAGENT_MODEL="${CLD_DEEP_SUBAGENT_MODEL:-deepseek-v4-flash}"
+SONNET_MODEL="${CLD_DEEP_SONNET_MODEL:-deepseek-v4-pro[1m]}"
+OPUS_MODEL="${CLD_DEEP_OPUS_MODEL:-deepseek-v4-pro[1m]}"
+HAIKU_MODEL="${CLD_DEEP_HAIKU_MODEL:-deepseek-v4-flash[1m]}"
+SUBAGENT_MODEL="${CLD_DEEP_SUBAGENT_MODEL:-deepseek-v4-flash[1m]}"
 EFFORT_LEVEL="${CLD_DEEP_EFFORT_LEVEL:-max}"
 
 ENV_DIR="${HOME}/.deepseek-claude"
