@@ -1,9 +1,7 @@
 # Claudeep — Claude Code with DeepSeek API
 
-<p align="center">
-  <b>Run <a href="https://claude.ai/code">Claude Code CLI</a> with <a href="https://deepseek.com">DeepSeek</a> models (deepseek-v4-pro, deepseek-v4-flash) instead of Anthropic's API.</b><br>
-  <b>One command to set up, <code>claudeep doctor</code> to stay healthy, <code>claudeep doctor --fix</code> to auto-repair.</b>
-</p>
+<b>Run <a href="https://claude.ai/code">Claude Code CLI</a> with <a href="https://deepseek.com">DeepSeek</a> models (deepseek-v4-pro, deepseek-v4-flash) instead of Anthropic's API.</b><br>
+<b>One command to set up, <code>claudeep doctor</code> to stay healthy, <code>claudeep doctor --fix</code> to auto-repair.</b>
 
 <p align="center">
   <img src="https://img.shields.io/badge/shell-bash%20%7C%20zsh%20%7C%20fish-blue" alt="Shells: bash, zsh, fish">
@@ -162,6 +160,19 @@ This removes the integration block from your shell config and deletes `~/.deepse
 4. Optionally tests the API connection with a minimal request
 
 The marker comments (`# >>> DeepSeek Claude integration >>>` / `# <<<`) make uninstall clean and safe — only the integration block is removed, leaving the rest of your shell config untouched.
+
+## Testing
+
+```bash
+# Install Bats (once)
+brew install bats-core       # macOS
+# apt install bats           # Linux
+
+# Run all tests
+bats test/
+```
+
+Tests use [Bats](https://github.com/bats-core/bats-core), the standard testing framework for shell scripts. Each test runs in a temporary `$HOME` — no files are touched on your real system.
 
 ## Prerequisites
 
