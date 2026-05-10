@@ -8,23 +8,27 @@ Configures Claude Code to use the DeepSeek API as a backend instead of Anthropic
 
 ## Key File
 
-**`setup.sh`** — The single entry point. Handles install, uninstall, and all configuration. Written in bash for maximum portability across macOS and Linux. Supports bash, zsh, and fish shells.
+**`setup.sh`** — Single entry point supporting subcommand-style CLI (`claudeep doctor`, `claudeep uninstall`, `claudeep install`). Written in bash for portability across macOS and Linux. Supports bash, zsh, and fish shells.
 
 ## Architecture
 
 ```
-User runs setup.sh
+User runs claudeep [command] → setup.sh
+  ├── Subcommand parsing: doctor | uninstall | install | setup | help
   ├── Detects shell (bash / zsh / fish) and its config file
-  ├── Validates the DeepSeek API key (must match ^sk-[A-Za-z0-9]+$)
-  ├── Creates ~/.deepseek-claude/
-  │     ├── env          ← POSIX export syntax (for bash/zsh)
-  │     └── env.fish     ← fish set -gx syntax (for fish)
-  ├── Appends a source line to shell config between marker comments:
-  │     # >>> DeepSeek Claude integration >>>
-  │     [ -f ~/.deepseek-claude/env ] && source ~/.deepseek-claude/env
-  │     # <<< DeepSeek Claude integration <<<
-  ├── Exports variables into the current shell session
-  └── Tests API connectivity via curl to /v1/messages
+  ├── [doctor]   Checks env vars, env file, shell config, API, CLI status
+  │     └── --fix: auto-sources correct env, removes stale exports, consolidates blocks
+  ├── [install]  Creates ~/.deepseek-claude/
+  │     ├── env          ← POSIX export syntax (for bash/zsh, chmod 600)
+  │     └── env.fish     ← fish set -gx syntax (for fish, chmod 600)
+  │     ├── Appends source line to shell config between markers:
+  │     │     # >>> DeepSeek Claude integration >>>
+  │     │     [ -f ~/.deepseek-claude/env ] && source ~/.deepseek-claude/env
+  │     │     # <<< DeepSeek Claude integration <<<
+  │     ├── Exports variables to current shell session
+  │     └── Tests API via curl to /v1/messages
+  ├── [uninstall] Removes marker block from shell config, deletes ~/.deepseek-claude/
+  └── [setup]    Interactive API key prompt → install
 ```
 
 ## Configuration Storage
@@ -57,23 +61,23 @@ All defaults can be overridden by setting `CLD_DEEP_*` environment variables bef
 ## Common Commands
 
 ```bash
-# Run the setup interactively
+# Interactive setup
 ./setup.sh
+
+# Subcommand-style (preferred, works via 'claudeep' symlink too)
+./setup.sh doctor            # Health check
+./setup.sh doctor --fix      # Health check + auto-repair
+./setup.sh uninstall         # Remove all config
+./setup.sh install           # Install as global 'claudeep' command
 
 # Non-interactive with API key
 ./setup.sh sk-abc123def456
 
 # Dry-run to preview
-./setup.sh --dry-run sk-...
+./setup.sh setup --dry-run sk-...
 
 # Force a specific shell
 ./setup.sh --shell fish sk-...
-
-# Skip API test (offline / known-good key)
-./setup.sh --no-test sk-...
-
-# Uninstall
-./setup.sh --uninstall
 ```
 
 ## Testing / Validation

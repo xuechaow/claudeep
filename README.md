@@ -22,7 +22,7 @@
 ./setup.sh sk-your-deepseek-api-key
 
 # Or curl directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/xuechaow/cld_deep/main/setup.sh | bash -s -- sk-your-api-key
+curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash -s -- sk-your-api-key
 ```
 
 Then run Claude Code as usual:
@@ -34,16 +34,17 @@ claude --bare
 ### Install as a CLI Command
 
 ```bash
-./setup.sh --install-cli          # Install as 'cld'
-./setup.sh --install-cli --cli-name myname  # Custom name
+./setup.sh install                        # Install as 'claudeep'
+./setup.sh install --cli-name myname      # Custom name
 ```
 
 After installation, run from anywhere:
 
 ```bash
-cld --doctor          # Health check
-cld --uninstall       # Remove config
-cld sk-...            # Reconfigure
+claudeep doctor              # Health check
+claudeep doctor --fix        # Auto-repair issues
+claudeep uninstall           # Remove config
+claudeep sk-...              # Reconfigure
 ```
 
 ## What It Does
@@ -65,19 +66,23 @@ The configuration is stored in `~/.deepseek-claude/env` and automatically source
 ## Usage
 
 ```
-setup.sh [OPTIONS] [API_KEY]
+claudeep COMMAND [OPTIONS]
+
+Commands:
+  setup [API_KEY]   Configure DeepSeek integration (default)
+  doctor [--fix]    Diagnose environment, config, and API
+  uninstall         Remove all configuration
+  install           Install claudeep as a global CLI command
+  help              Show help
 
 Options:
-  -h, --help         Show help message
-  -D, --doctor       Run health check — diagnose environment, config, and API
-  -I, --install-cli  Install as a global CLI command (default: cld)
-      --cli-name N   Custom CLI command name
-      --cli-bin DIR  Install directory (default: /usr/local/bin)
-  -u, --uninstall    Remove all configuration
-  -s, --shell NAME   Specify shell (bash, zsh, fish) — auto-detected by default
-  -n, --no-test      Skip the API connectivity test
-  -d, --dry-run      Preview changes without applying them
-  -q, --quiet        Suppress informational output
+  --fix             (with doctor) Auto-repair common issues
+  --cli-name NAME   (with install) Custom CLI name (default: claudeep)
+  --cli-bin DIR     (with install) Target directory (default: /usr/local/bin)
+  -s, --shell NAME  Specify shell (bash, zsh, fish) — auto-detected
+  -n, --no-test     Skip API connectivity test
+  -d, --dry-run     Preview without applying changes
+  -q, --quiet       Suppress informational output
 ```
 
 ### Custom Models or Endpoints
@@ -113,8 +118,8 @@ CLD_DEEP_SONNET_MODEL="your-custom-model" ./setup.sh sk-...
 Diagnose your setup to catch stale keys, config conflicts, and API issues:
 
 ```bash
-cld --doctor
-# or: ./setup.sh --doctor
+claudeep doctor
+# or: ./setup.sh doctor
 ```
 
 The doctor checks:
@@ -122,14 +127,23 @@ The doctor checks:
 2. **Config file** — does `~/.deepseek-claude/env` exist with correct permissions? Does its key match the current session?
 3. **Shell integration** — is the source block present? Are there stale direct exports from an old setup that could load wrong keys?
 4. **API connectivity** — can the current key reach DeepSeek?
-5. **CLI installation** — is `cld` in your PATH? Is Claude Code available?
+5. **CLI installation** — is `claudeep` in your PATH? Is Claude Code available?
 
 Each check shows a ✓, ✗, or ⚠ with specific fix instructions.
+
+### Auto-repair
+
+```bash
+claudeep doctor --fix
+```
+
+Automatically fixes the most common issues: sources the correct env file if there's a key mismatch, removes stale direct exports from your shell config, consolidates duplicate integration blocks, and fixes file permissions.
 
 ## Uninstall
 
 ```bash
-./setup.sh --uninstall
+claudeep uninstall
+# or: ./setup.sh uninstall
 ```
 
 This removes the integration block from your shell config and deletes `~/.deepseek-claude/`. Environment variables already set in the current session are unaffected — they disappear when you open a new terminal.
@@ -152,7 +166,7 @@ The marker comments (`# >>> DeepSeek Claude integration >>>` / `# <<<`) make uni
 ## Files
 
 ```
-cld_deep/
+claudeep/
 ├── setup.sh          # Setup, doctor, uninstall, CLI install — all in one
 ├── README.md         # This file
 ├── LICENSE           # MIT license
