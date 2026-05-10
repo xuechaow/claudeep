@@ -7,7 +7,7 @@ on:
     branches: [main]
 
 jobs:
-  test:
+  unit:
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -20,7 +20,18 @@ jobs:
           curl -fsSL https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz | tar xz
           cd bats-core-1.13.0
           sudo ./install.sh /usr/local
-      - name: Run tests
+      - name: Run unit tests
         run: |
           bats test/api_key.bats test/shell_detect.bats test/env_file.bats \
                test/source_block.bats test/doctor.bats test/cli.bats
+
+  integration:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run integration tests
+        run: bash test/integration.sh
