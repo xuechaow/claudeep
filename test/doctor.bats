@@ -36,9 +36,15 @@ load test_helper
     create_shell_config "${HOME}/.zshrc"
     add_source_line "${HOME}/.zshrc" "zsh"
 
+    # Put mock scripts in a temp bin so CLI check passes
+    local mock_bin="${TEST_ROOT}/bin"
+    mkdir -p "$mock_bin"
+    echo "#!/bin/sh" > "${mock_bin}/claude" && chmod +x "${mock_bin}/claude"
+    echo "#!/bin/sh" > "${mock_bin}/claudeep" && chmod +x "${mock_bin}/claudeep"
+    export PATH="${mock_bin}:${PATH}"
+
     run do_doctor "zsh" "${HOME}/.zshrc"
-    # Should not report any critical issues (warnings from missing CLI are OK)
-    [[ "$output" != *"✗ Found"* ]]
+    [[ "$output" == *"All checks passed"* ]]
 }
 
 @test "detects stale direct exports in shell config" {
