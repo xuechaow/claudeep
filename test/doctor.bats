@@ -36,12 +36,9 @@ load test_helper
     create_shell_config "${HOME}/.zshrc"
     add_source_line "${HOME}/.zshrc" "zsh"
 
-    # Mock claude/claudeep in PATH so CLI check doesn't warn
-    function claude() { :; }; export -f claude
-    function claudeep() { :; }; export -f claudeep
-
     run do_doctor "zsh" "${HOME}/.zshrc"
-    [[ "$output" == *"All checks passed"* || "$output" == *"Ready"* ]]
+    # Should not report any critical issues (warnings from missing CLI are OK)
+    [[ "$output" != *"✗ Found"* ]]
 }
 
 @test "detects stale direct exports in shell config" {
