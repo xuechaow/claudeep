@@ -18,7 +18,7 @@
 ## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash
+bash <(curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh)
 ```
 
 Prompts for your API key, sets everything up, tests the connection. Then:
