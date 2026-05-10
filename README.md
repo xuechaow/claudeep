@@ -18,20 +18,7 @@
 ## Quick Start
 
 ```bash
-# Interactive mode (prompts for your API key)
-./setup.sh
-
-# Non-interactive (pass API key directly)
-./setup.sh sk-your-deepseek-api-key
-
-# Or curl directly from GitHub
 curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash -s -- sk-your-api-key
-```
-
-Then run Claude Code as usual:
-
-```bash
-claude --bare
 ```
 
 ### Install as a CLI Command
