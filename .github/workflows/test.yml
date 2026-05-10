@@ -15,11 +15,11 @@ jobs:
         os: [ubuntu-latest, macos-latest]
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
       - name: Install Bats
-        run: npm install -g bats
+        run: |
+          curl -fsSL https://github.com/bats-core/bats-core/archive/refs/tags/v1.13.0.tar.gz | tar xz
+          cd bats-core-1.13.0
+          sudo ./install.sh /usr/local
       - name: Run tests
         run: |
           bats test/api_key.bats test/shell_detect.bats test/env_file.bats \
