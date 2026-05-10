@@ -19,13 +19,7 @@
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/install.sh | bash
-```
-
-Also available via npm and Homebrew:
-
-```bash
-npm install -g claudeep@latest
-brew tap xuechaow/claudeep && brew install claudeep
+# or: npm install -g claudeep@latest
 ```
 
 Then run it:
