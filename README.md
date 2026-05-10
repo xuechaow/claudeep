@@ -22,7 +22,7 @@
 ./setup.sh sk-your-deepseek-api-key
 
 # Or curl directly from GitHub
-curl -fsSL https://raw.githubusercontent.com/xuechaowu/cld_deep/main/setup.sh | bash -s -- sk-your-api-key
+curl -fsSL https://raw.githubusercontent.com/xuechaow/cld_deep/main/setup.sh | bash -s -- sk-your-api-key
 ```
 
 Then run Claude Code as usual:
@@ -124,4 +124,4 @@ cld_deep/
 
 ## License
 
-MIT © [xuechaowu](https://github.com/xuechaowu)
+MIT © [xuechaow](https://github.com/xuechaow)
