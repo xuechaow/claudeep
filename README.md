@@ -1,13 +1,19 @@
-# DeepSeek + Claude Code Integration
+# Claudeep — Claude Code with DeepSeek API
 
 <p align="center">
-  <b>Configure <a href="https://claude.ai/code">Claude Code</a> to use the <a href="https://deepseek.com">DeepSeek</a> API as its model backend.</b>
+  <b>Run <a href="https://claude.ai/code">Claude Code CLI</a> with <a href="https://deepseek.com">DeepSeek</a> models (deepseek-v4-pro, deepseek-v4-flash) instead of Anthropic's API.</b><br>
+  <b>One command to set up, <code>claudeep doctor</code> to stay healthy, <code>claudeep doctor --fix</code> to auto-repair.</b>
 </p>
 
 <p align="center">
   <img src="https://img.shields.io/badge/shell-bash%20%7C%20zsh%20%7C%20fish-blue" alt="Shells: bash, zsh, fish">
   <img src="https://img.shields.io/badge/platform-macOS%20%7C%20Linux-lightgrey" alt="Platform: macOS, Linux">
   <img src="https://img.shields.io/badge/license-MIT-green" alt="License: MIT">
+  <img src="https://img.shields.io/github/stars/xuechaow/claudeep?style=social" alt="GitHub stars">
+</p>
+
+<p align="center">
+  <img src="https://raw.githubusercontent.com/xuechaow/claudeep/main/banner.svg" alt="claudeep — Claude Code + DeepSeek" width="800">
 </p>
 
 ---
