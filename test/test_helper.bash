@@ -31,7 +31,7 @@ setup() {
     ARG_INSTALL_CLI=false
     ARG_CLI_NAME=""
     ARG_CLI_BIN=""
-    ARG_NO_TEST=false
+    ARG_NO_TEST=true   # skip API calls in tests by default
     ARG_DRY_RUN=false
     ARG_QUIET=false
 }

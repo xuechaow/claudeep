@@ -239,13 +239,11 @@ remove_source_block() {
 _spinner_pid=""
 _spin() {
     local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    local i=0
     while kill -0 "${_spinner_pid}" 2>/dev/null; do
-        local c
-        for ((i=0; i<${#chars}; i++)); do
-            c="${chars:$i:1}"
-            printf "\r  ${BLUE}%s${NC} Testing connection..." "$c"
-            sleep 0.1
-        done
+        printf "\r  ${BLUE}%s${NC} Testing connection..." "${chars:$i:1}"
+        i=$(( (i + 1) % ${#chars} ))
+        sleep 0.1
     done
     printf "\r\033[K"
 }
@@ -688,7 +686,9 @@ do_doctor() {
     # ── 4. API connectivity ─────────────────────────────────────────
     echo ""
     echo -e "${BOLD}4. API connectivity${NC}"
-    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+    if [[ "${ARG_NO_TEST:-false}" == "true" ]]; then
+        echo -e "   ${YELLOW}⊘${NC} Skipped (--no-test)"
+    elif [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
         if test_api "${ANTHROPIC_AUTH_TOKEN}"; then
             : # test_api already prints success
         else
