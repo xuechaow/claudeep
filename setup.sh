@@ -556,7 +556,11 @@ do_doctor() {
     echo -e "${BOLD}2. Config file${NC} (${ENV_FILE})"
     if [[ -f "$ENV_FILE" ]]; then
         local perms
-        perms=$(stat -f "%p" "$ENV_FILE" 2>/dev/null || stat -c "%a" "$ENV_FILE" 2>/dev/null)
+        if [[ "$(uname)" == "Darwin" ]]; then
+            perms=$(stat -f "%p" "$ENV_FILE" 2>/dev/null)
+        else
+            perms=$(stat -c "%a" "$ENV_FILE" 2>/dev/null)
+        fi
         if [[ "$perms" == "100600" || "$perms" == "600" ]]; then
             echo -e "   ${GREEN}✓${NC} File exists (permissions: 600)"
         else
