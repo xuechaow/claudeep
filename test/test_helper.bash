@@ -25,6 +25,7 @@ setup() {
     # Reset global state flags
     ARG_SHELL=""
     ARG_UNINSTALL=false
+    ARG_STATUS=false
     ARG_DOCTOR=false
     ARG_DOCTOR_FIX=false
     ARG_INSTALL_CLI=false

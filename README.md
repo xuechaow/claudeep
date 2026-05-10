@@ -18,14 +18,14 @@
 ## Quick Start
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o setup.sh
-bash setup.sh sk-your-api-key
+curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh | bash
 ```
 
-Setup will prompt to auto-install the `claudeep` CLI command. After that:
+Prompts for your API key, sets everything up, tests the connection. Then:
 
 ```bash
-claudeep doctor
+claudeep           # quick status
+claudeep doctor    # if something is off
 ```
 
 ## What It Does

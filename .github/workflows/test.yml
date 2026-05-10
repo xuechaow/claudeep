@@ -15,11 +15,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Install Bats
-        run: |
-          if [[ "$RUNNER_OS" == "Linux" ]]; then
-            sudo apt-get update && sudo apt-get install -y bats
-          else
-            brew install bats-core
-          fi
+        run: npm install -g bats
       - name: Run tests
-        run: bats test/*.bats
+        run: |
+          bats test/api_key.bats test/shell_detect.bats test/env_file.bats \
+               test/source_block.bats test/doctor.bats test/cli.bats

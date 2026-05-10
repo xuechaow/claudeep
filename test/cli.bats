@@ -62,6 +62,30 @@ load test_helper
     [ -d "$ENV_DIR" ]
 }
 
+@test "no args shows status when config exists" {
+    # Create config so status path is taken (not interactive setup)
+    mkdir -p "$ENV_DIR"
+    write_posix_env "sk-test000"
+    create_shell_config "${HOME}/.zshrc"
+    add_source_line "${HOME}/.zshrc" "zsh"
+
+    run main
+    [[ "$output" == *"Key:"* ]]
+    [[ "$output" != *"Enter your DeepSeek API key"* ]]
+}
+
+@test "no args prompts when no config exists" {
+    # No env file → should prompt for API key
+    # (can't test interactive read, but we can check the prompt is attempted)
+    run main </dev/null 2>&1 || true
+    [[ "$output" == *"Enter your DeepSeek API key"* ]]
+}
+
+@test "subcommand dispatch: status" {
+    run main status
+    [[ "$output" == *"Key:"* ]]
+}
+
 @test "subcommand dispatch: doctor" {
     mock_curl_success
     create_shell_config "${HOME}/.zshrc"

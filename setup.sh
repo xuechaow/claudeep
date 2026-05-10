@@ -51,8 +51,9 @@ ${BOLD}Usage:${NC}
   claudeep COMMAND [OPTIONS]
 
 ${BOLD}Commands:${NC}
-  setup [API_KEY]     Configure DeepSeek integration (default if no command given)
-  doctor [--fix]      Diagnose environment, config, and API connectivity
+  setup [API_KEY]     Configure DeepSeek integration
+  status              Quick health check (default when run with no args)
+  doctor [--fix]      Full diagnostic — run when something is wrong
   uninstall           Remove all configuration files and shell integration
   install             Install claudeep as a global CLI command
   help                Show this message
@@ -71,10 +72,11 @@ ${BOLD}Setup options:${NC}
   -q, --quiet         Suppress informational output (errors still shown)
 
 ${BOLD}Examples:${NC}
-  claudeep                                # Interactive setup
-  claudeep sk-abc123def456                # Setup with API key
-  claudeep doctor                         # Health check
-  claudeep doctor --fix                   # Health check + auto-repair
+  claudeep                                # Quick status check
+  claudeep status                         # Same as above
+  claudeep doctor                         # Full diagnostic
+  claudeep doctor --fix                   # Diagnostic + auto-repair
+  claudeep setup sk-abc123def456          # Configure with API key
   claudeep uninstall                      # Remove everything
   claudeep install                        # Install as global command
 
@@ -233,23 +235,51 @@ remove_source_block() {
     fi
 }
 
+# ── Spinner animation ────────────────────────────────────────────────
+_spinner_pid=""
+_spin() {
+    local chars='⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏'
+    while kill -0 "${_spinner_pid}" 2>/dev/null; do
+        local c
+        for ((i=0; i<${#chars}; i++)); do
+            c="${chars:$i:1}"
+            printf "\r  ${BLUE}%s${NC} Testing connection..." "$c"
+            sleep 0.1
+        done
+    done
+    printf "\r\033[K"
+}
+
 # ── Test API connectivity ─────────────────────────────────────────────
 test_api() {
     local key="$1"
     local url="${BASE_URL}/v1/messages"
 
-    step "Testing connection to DeepSeek API (${url})..."
+    local tmpfile
+    tmpfile="$(mktemp)"
 
-    local response http_code
-    response=$(curl -s -w "\n%{http_code}" -m 20 -X POST "$url" \
-        -H "Content-Type: application/json" \
-        -H "x-api-key: ${key}" \
-        -H "anthropic-version: 2023-06-01" \
-        -d "{\"model\":\"${SONNET_MODEL}\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"say OK\"}]}" 2>&1) || {
+    # Run curl in background, spinner on top
+    (
+        curl -s -w "\n%{http_code}" -m 20 -X POST "$url" \
+            -H "Content-Type: application/json" \
+            -H "x-api-key: ${key}" \
+            -H "anthropic-version: 2023-06-01" \
+            -d "{\"model\":\"${SONNET_MODEL}\",\"max_tokens\":8,\"messages\":[{\"role\":\"user\",\"content\":\"say OK\"}]}" 2>&1
+    ) > "$tmpfile" &
+    _spinner_pid=$!
+    _spin
+    wait "${_spinner_pid}" || true
+
+    local response
+    response="$(cat "$tmpfile")"
+    rm -f "$tmpfile"
+
+    if [[ -z "$response" ]]; then
         error "Could not reach the API. Check your network and the BASE_URL."
         return 1
-    }
+    fi
 
+    local http_code
     http_code=$(echo "$response" | tail -1)
     local body
     body=$(echo "$response" | sed '$d')
@@ -420,6 +450,57 @@ do_uninstall() {
     echo "    unset ANTHROPIC_BASE_URL ANTHROPIC_AUTH_TOKEN ANTHROPIC_DEFAULT_SONNET_MODEL"
     echo "    unset ANTHROPIC_DEFAULT_OPUS_MODEL ANTHROPIC_DEFAULT_HAIKU_MODEL"
     echo "    unset CLAUDE_CODE_SUBAGENT_MODEL CLAUDE_CODE_EFFORT_LEVEL"
+    echo ""
+}
+
+# ── Status (quick check, no args default) ─────────────────────────────
+do_status() {
+    local shell_name="$1"
+    local config_file="$2"
+    local ok=true
+
+    echo ""
+
+    # Env check
+    if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]]; then
+        echo -e "  ${GREEN}●${NC} Key: ${ANTHROPIC_AUTH_TOKEN:0:10}...${ANTHROPIC_AUTH_TOKEN: -4}"
+    else
+        echo -e "  ${RED}○${NC} Key: not set — run ${BOLD}claudeep setup sk-YOUR-KEY${NC}"
+        ok=false
+    fi
+
+    if [[ -n "${ANTHROPIC_BASE_URL:-}" ]]; then
+        echo -e "  ${GREEN}●${NC} URL: ${ANTHROPIC_BASE_URL}"
+    fi
+
+    # Config file
+    if [[ -f "$ENV_FILE" ]]; then
+        local env_key
+        env_key=$(grep 'ANTHROPIC_AUTH_TOKEN=' "$ENV_FILE" 2>/dev/null | cut -d'"' -f2)
+        if [[ -n "${ANTHROPIC_AUTH_TOKEN:-}" ]] && [[ "$env_key" == "${ANTHROPIC_AUTH_TOKEN}" ]]; then
+            echo -e "  ${GREEN}●${NC} Config: matches session"
+        elif [[ -n "$env_key" ]]; then
+            echo -e "  ${YELLOW}●${NC} Config: key mismatch — run ${BOLD}claudeep doctor --fix${NC}"
+            ok=false
+        fi
+    fi
+
+    # Shell integration
+    if [[ -f "$config_file" ]]; then
+        if grep -q ">>> DeepSeek Claude integration >>>" "$config_file" 2>/dev/null; then
+            echo -e "  ${GREEN}●${NC} Shell: integrated"
+        else
+            echo -e "  ${YELLOW}●${NC} Shell: not integrated — run ${BOLD}claudeep setup${NC}"
+            ok=false
+        fi
+    fi
+
+    echo ""
+    if [[ "$ok" == "true" ]]; then
+        echo -e "  ${GREEN}${BOLD}Ready.${NC} Run: ${BOLD}claude --bare${NC}"
+    else
+        echo -e "  ${YELLOW}Run ${BOLD}claudeep doctor${NC} for details."
+    fi
     echo ""
 }
 
@@ -667,7 +748,15 @@ do_install_cli() {
     local target="${bin_dir}/${cli_name}"
     local script_path
 
-    script_path="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/setup.sh"
+    # Determine script location; if piped (no real file), download from GitHub
+    if [[ -f "${BASH_SOURCE[0]:-$0}" ]]; then
+        script_path="$(cd "$(dirname "${BASH_SOURCE[0]:-$0}")" && pwd)/$(basename "${BASH_SOURCE[0]:-$0}")"
+    else
+        script_path="${ENV_DIR}/setup.sh"
+        info "Downloading setup.sh from GitHub..."
+        curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o "$script_path"
+        chmod +x "$script_path"
+    fi
 
     echo ""
     echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗${NC}"
@@ -681,12 +770,6 @@ do_install_cli() {
     if [[ "${ARG_DRY_RUN:-false}" == "true" ]]; then
         echo -e "${YELLOW}[DRY RUN]${NC} Would symlink ${script_path} → ${target}"
         return 0
-    fi
-
-    # Check the script exists
-    if [[ ! -f "$script_path" ]]; then
-        error "Script not found at ${script_path}"
-        return 1
     fi
 
     # Check write permission; suggest sudo if needed
@@ -725,6 +808,7 @@ do_install_cli() {
 main() {
     local ARG_SHELL=""
     local ARG_UNINSTALL=false
+    local ARG_STATUS=false
     local ARG_DOCTOR=false
     local ARG_DOCTOR_FIX=false
     local ARG_INSTALL_CLI=false
@@ -739,12 +823,12 @@ main() {
     if [[ $# -gt 0 ]] && [[ ! "$1" =~ ^- ]] && [[ ! "$1" =~ ^sk- ]]; then
         case "$1" in
             help)      usage ;;
+            status)    ARG_STATUS=true; shift ;;
             doctor)    ARG_DOCTOR=true; shift ;;
             uninstall) ARG_UNINSTALL=true; shift ;;
             install)   ARG_INSTALL_CLI=true; shift ;;
-            setup)     shift ;;  # "setup" is a no-op, fall through to install
+            setup)     shift ;;  # "setup" is a no-op, fall through to install flow
             *)
-                # Not a known subcommand — could be an API key
                 if [[ "$1" =~ ^sk- ]]; then
                     API_KEY="$1"; shift
                 else
@@ -796,6 +880,11 @@ main() {
         return 0
     fi
 
+    if [[ "$ARG_STATUS" == "true" ]]; then
+        do_status "$shell_name" "$config_file"
+        return 0
+    fi
+
     if [[ "$ARG_INSTALL_CLI" == "true" ]]; then
         do_install_cli
         return 0
@@ -806,14 +895,26 @@ main() {
         return 0
     fi
 
-    # Default: setup
-    if [[ -z "$API_KEY" ]]; then
+    # If API key given, do setup
+    if [[ -n "$API_KEY" ]]; then
+        do_install "$API_KEY" "$shell_name" "$config_file"
+        return 0
+    fi
+
+    # Default: if config exists → status, else → interactive setup
+    if [[ -f "$ENV_FILE" ]]; then
+        do_status "$shell_name" "$config_file"
+    else
+        echo ""
+        echo -e "${BOLD}${BLUE}╔══════════════════════════════════════════════╗${NC}"
+        echo -e "${BOLD}${BLUE}║  claudeep — Claude Code + DeepSeek           ║${NC}"
+        echo -e "${BOLD}${BLUE}╚══════════════════════════════════════════════╝${NC}"
+        echo ""
         echo -n "Enter your DeepSeek API key (starts with sk-): "
         read -r API_KEY
         echo ""
+        do_install "$API_KEY" "$shell_name" "$config_file"
     fi
-
-    do_install "$API_KEY" "$shell_name" "$config_file"
 }
 
 # Only run main if executed directly (not sourced, e.g. by tests)
