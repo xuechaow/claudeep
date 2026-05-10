@@ -18,13 +18,17 @@
 ## Install
 
 ```bash
-npm install -g claudeep@latest
-# or: pnpm add -g claudeep@latest
-# or: brew tap xuechaow/claudeep && brew install claudeep
-# or: curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/setup.sh -o /usr/local/bin/claudeep && chmod +x /usr/local/bin/claudeep
+curl -fsSL https://raw.githubusercontent.com/xuechaow/claudeep/main/install.sh | bash
 ```
 
-Then:
+Also available via npm and Homebrew:
+
+```bash
+npm install -g claudeep@latest
+brew tap xuechaow/claudeep && brew install claudeep
+```
+
+Then run it:
 
 ```bash
 claudeep
