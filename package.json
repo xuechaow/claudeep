@@ -1,6 +1,6 @@
 {
   "name": "claudeep",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Configure Claude Code to use DeepSeek API as backend",
   "bin": {
     "claudeep": "setup.sh"
